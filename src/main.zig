@@ -4,7 +4,7 @@ const shell = @import("commands.zig");
 
 const banner =
     \\ |=========================================|
-    \\ |  PhoenixShell (на Zig 0.16.0)           |  
+    \\ |  PhoenixShell v0.1.0 (на Zig 0.16.0)    |
     \\ |  Введите 'help', чтобы увидеть команды. |
     \\ |=========================================|
     \\
@@ -25,6 +25,7 @@ const Command = enum {
     run,
     clear,
     exit,
+    fetch,
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -52,7 +53,7 @@ pub fn main(init: std.process.Init) !void {
                 continue;
             },
             error.ReadFailed => return err,
-        } 
+        }
         orelse {
             try output.writeAll("\n");
             break;
@@ -72,6 +73,7 @@ pub fn main(init: std.process.Init) !void {
 
         switch (cmd) {
             .help  => try shell.cmdHelp(output),
+            .fetch => try shell.cmdFetch(output),
             .exit  => break,
             .clear => try output.writeAll("\x1b[2J\x1b[3J\x1b[H"),
             .echo  => try output.print("{s}\n", .{rest}),
@@ -92,23 +94,23 @@ pub fn main(init: std.process.Init) !void {
     try output.flush();
 }
 
-const ReadLineError = error { 
-    LineTooLong, 
-    ReadFailed 
+const ReadLineError = error {
+    LineTooLong,
+    ReadFailed
 };
 
 fn readLine(reader: *Io.Reader) ReadLineError !? []u8 {
     if (reader.takeDelimiterExclusive('\n')) |line| {
         reader.toss(1);
         return line;
-    } 
+    }
     else |err| switch (err) {
         error.EndOfStream => {
             const tail = reader.buffered();
-            if (tail.len == 0) { 
+            if (tail.len == 0) {
                 return null;
             }
-            
+
             reader.toss(tail.len);
             return tail;
         },
@@ -118,7 +120,7 @@ fn readLine(reader: *Io.Reader) ReadLineError !? []u8 {
                 if (reader.takeDelimiterExclusive('\n')) |_| {
                     reader.toss(1);
                     break;
-                } 
+                }
                 else |err2| switch (err2) {
                     error.StreamTooLong => continue,
                     error.EndOfStream   => break,
