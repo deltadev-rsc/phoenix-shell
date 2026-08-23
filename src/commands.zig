@@ -10,20 +10,26 @@ const BLUE = "\x1b[34m";
 const MAGENTA = "\x1b[35m";
 const CYAN = "\x1b[36m";
 
-const help_table = [_]struct { usage: []const u8, desc: []const u8 }{
-    .{ .usage = "help", .desc = "показать эту справку" },
-    .{ .usage = "echo <текст>", .desc = "напечатать текст обратно" },
-    .{ .usage = "add <a> <b>", .desc = "сложить два целых числа" },
-    .{ .usage = "mul <a> <b>", .desc = "умножить два целых числа" },
-    .{ .usage = "upper <текст>", .desc = "текст В ВЕРХНЕМ РЕГИСТРЕ" },
-    .{ .usage = "reverse <текст>", .desc = "перевернуть строку (побайтово)" },
-    .{ .usage = "len <текст>", .desc = "длина строки в байтах (UTF-8)" },
-    .{ .usage = "env <ИМЯ>", .desc = "показать переменную окружения" },
-    .{ .usage = "args", .desc = "показать аргументы командной строки" },
+const help_table = [_]struct {
+    usage: []const u8,
+    desc: []const u8
+} {
+    .{ .usage = "help",             .desc = "показать эту справку" },
+    .{ .usage = "echo <текст>",     .desc = "напечатать текст обратно" },
+    .{ .usage = "add <a> <b>",      .desc = "сложить два целых числа" },
+    .{ .usage = "mul <a> <b>",      .desc = "умножить два целых числа" },
+    .{ .usage = "upper <текст>",    .desc = "текст В ВЕРХНЕМ РЕГИСТРЕ" },
+    .{ .usage = "reverse <текст>",  .desc = "перевернуть строку (побайтово)" },
+    .{ .usage = "lower <текст>",    .desc = "переводит текст в нижний регистр" },
+    .{ .usage = "len <текст>",      .desc = "длина строки в байтах (UTF-8)" },
+    .{ .usage = "env <ИМЯ>",        .desc = "показать переменную окружения" },
+    .{ .usage = "args",             .desc = "показать аргументы командной строки" },
     .{ .usage = "run <prog> [arg]", .desc = "запустить внешнюю программу" },
-    .{ .usage = "clear", .desc = "очистить экран терминала" },
-    .{ .usage = "exit", .desc = "выйти из dltsh" },
-    .{ .usage = "fetch", .desc = "как neofetch или nitch но для PhoenixShell" },
+    .{ .usage = "clear",            .desc = "очистить экран терминала" },
+    .{ .usage = "exit",             .desc = "выйти из PhoenixShell" },
+    .{ .usage = "fetch",            .desc = "как neofetch или nitch но для PhoenixShell" },
+    .{ .usage = "ver",              .desc = "показывает версию PhoenixShell" },
+    .{ .usage = "list",             .desc = "выводит файлы в текущей папке" },
 };
 
 pub fn cmdHelp(stdout: *Io.Writer) !void {
@@ -46,20 +52,19 @@ pub fn cmdCalc(
     const b_str = words.next() orelse return printCalcUsage(stdout, op);
 
     const a = std.fmt.parseInt(i64, a_str, 10) catch {
-        try stdout.print("dltsh: '{s}' — не целое число\n", .{a_str});
+        try stdout.print("PhoenixShell: '{s}' — не целое число\n", .{a_str});
         return;
     };
     const b = std.fmt.parseInt(i64, b_str, 10) catch {
-        try stdout.print("dltsh: '{s}' — не целое число\n", .{b_str});
+        try stdout.print("PhoenixShell: '{s}' — не целое число\n", .{b_str});
         return;
     };
 
-    // std.math.add / mul сами отслеживают переполнение i64
     const result = switch (op) {
         .add => std.math.add(i64, a, b),
         .mul => std.math.mul(i64, a, b),
     } catch {
-        try stdout.writeAll("dltsh: переполнение i64!\n");
+        try stdout.writeAll("PhoenixShell: переполнение i64!\n");
         return;
     };
 
@@ -73,9 +78,16 @@ fn printCalcUsage(stdout: *Io.Writer, op: CalcOp) Io.Writer.Error!void {
 
 // --- команды для вывода текста. --- //
 // --- перевод его в верхний регистр или переворачиавание слева направо --- //
-pub fn cmdUpper(stdout: *Io.Writer, text: []const u8) Io.Writer.Error!void {
-    if (text.len == 0) return stdout.writeAll("  синтаксис: upper <текст>\n");
-    if (text.len > 1024) return stdout.writeAll("dltsh: текст слишком длинный\n");
+pub fn cmdUpper(
+    stdout: *Io.Writer,
+    text: []const u8
+) Io.Writer.Error !void {
+    if (text.len == 0) {
+        return stdout.writeAll("  синтаксис: upper <текст>\n");
+    }
+    if (text.len > 1024) {
+        return stdout.writeAll("dltsh: текст слишком длинный\n");
+    }
 
     var buf: [1024]u8 = undefined;
     for (text, 0..) |c, i| {
@@ -84,17 +96,49 @@ pub fn cmdUpper(stdout: *Io.Writer, text: []const u8) Io.Writer.Error!void {
     try stdout.print("{s}\n", .{buf[0..text.len]});
 }
 
-pub fn cmdReverse(stdout: *Io.Writer, text: []const u8) Io.Writer.Error!void {
-    if (text.len == 0) return stdout.writeAll("  синтаксис: reverse <текст>\n");
-    if (text.len > 1024) return stdout.writeAll("dltsh: текст слишком длинный\n");
+pub fn cmdLower(
+    stdout: *Io.Writer,
+    text: []const u8
+) Io.Writer.Error !void {
+    if (text.len == 0) {
+        return stdout.writeAll("  синтаксис: lower <текст>\n");
+    }
+    if (text.len > 1024) {
+        return stdout.writeAll("dltsh: текст слишком длинный\n");
+    }
 
     var buf: [1024]u8 = undefined;
-    for (text, 0..) |c, i| buf[text.len - 1 - i] = c;
+    for (text, 0..) |c, i| {
+        buf[i] = if (c >= 'A' and c <= 'Z') c + 'a' - 'A' else c;
+    }
+    try stdout.print("{s}\n", .{buf[0..text.len]});
+}
+
+pub fn cmdReverse(
+    stdout: *Io.Writer,
+    text: []const u8
+) Io.Writer.Error !void {
+    if (text.len == 0) {
+        return stdout.writeAll("  синтаксис: reverse <текст>\n");
+    }
+
+    if (text.len > 1024) {
+        return stdout.writeAll("PhoenixShell: текст слишком длинный\n");
+    }
+
+    var buf: [1024]u8 = undefined;
+    for (text, 0..) |c, i| {
+        buf[text.len - 1 - i] = c;
+    }
     try stdout.print("{s}\n", .{buf[0..text.len]});
 }
 
 //--- Всякие базовые команды ---//
-pub fn cmdEnv(stdout: *Io.Writer, init: std.process.Init, name: []const u8) Io.Writer.Error!void {
+pub fn cmdEnv(
+    stdout: *Io.Writer,
+    init: std.process.Init,
+    name: []const u8
+) Io.Writer.Error !void {
     if (name.len == 0) {
         return stdout.writeAll("  синтаксис: env <ИМЯ>\n");
     }
@@ -102,7 +146,7 @@ pub fn cmdEnv(stdout: *Io.Writer, init: std.process.Init, name: []const u8) Io.W
     if (init.environ_map.get(name)) |value| {
         try stdout.print("{s}={s}\n", .{ name, value });
     } else {
-        try stdout.print("dltsh: переменная '{s}' не установлена\n", .{name});
+        try stdout.print("PhoenixShell: переменная '{s}' не установлена\n", .{name});
     }
 }
 
@@ -126,7 +170,38 @@ pub fn cmdFetch(stdout: *Io.Writer) !void {
     try stdout.print("{s} [GPU]:   [ventilator-3000] {s}\n", .{ YELLOW, RESET });
 }
 
-pub fn cmdArgs(stdout: *Io.Writer, init: std.process.Init, arena: std.mem.Allocator) !void {
+pub fn cmdVersion(stdout: *Io.Writer) !void {
+    try stdout.print("{s} PhoenixShell v0.1.0 {s} \n", .{ YELLOW, RESET });
+}
+
+pub fn cmdList(
+    stdout: *Io.Writer,
+    init: std.process.Init
+) !void {
+    const io = init.io;
+
+    var dir = std.Io.Dir.cwd().openDir(io, ".", .{.iterate = true}) catch {
+        try stdout.print("{s} Не удалось открыть текущую папку. {s}\n", .{ RED, RESET });
+        return;
+    };
+
+    defer dir.close(io);
+
+    try stdout.print("{s} Файлы в текущей папке: {s}\n", .{ YELLOW, RESET });
+
+    var iter = dir.iterate();
+    while (try iter.next(io)) |entry| {
+        if (entry.name[0] != '.') {
+            try stdout.print("{s}\n", .{ entry.name });
+        }
+    }
+}
+
+pub fn cmdArgs(
+    stdout: *Io.Writer,
+    init: std.process.Init,
+    arena: std.mem.Allocator
+) !void {
     const argv = try init.minimal.args.toSlice(arena);
     for (argv, 0..) |arg, i| {
         try stdout.print("argv[{d}] = {s}\n", .{ i, arg });
@@ -151,7 +226,7 @@ pub fn cmdRun(
     const result = std.process.run(gpa, io, .{
         .argv = argv.items,
     }) catch |err| {
-        try stdout.print("dltsh: не удалось запустить '{s}': {s}\n", .{
+        try stdout.print("PhoenixShell: не удалось запустить '{s}': {s}\n", .{
             argv.items[0], @errorName(err),
         });
         return;
