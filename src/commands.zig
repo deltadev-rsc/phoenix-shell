@@ -1,6 +1,15 @@
 const std = @import("std");
 const Io = std.Io;
 
+// --- Цвета --- //
+const RESET = "\x1b[0m";
+const RED = "\x1b[31m";
+const GREEN = "\x1b[32m";
+const YELLOW = "\x1b[33m";
+const BLUE = "\x1b[34m";
+const MAGENTA = "\x1b[35m";
+const CYAN = "\x1b[36m";
+
 const help_table = [_]struct { usage: []const u8, desc: []const u8 }{
     .{ .usage = "help", .desc = "показать эту справку" },
     .{ .usage = "echo <текст>", .desc = "напечатать текст обратно" },
@@ -14,6 +23,7 @@ const help_table = [_]struct { usage: []const u8, desc: []const u8 }{
     .{ .usage = "run <prog> [arg]", .desc = "запустить внешнюю программу" },
     .{ .usage = "clear", .desc = "очистить экран терминала" },
     .{ .usage = "exit", .desc = "выйти из dltsh" },
+    .{ .usage = "fetch", .desc = "как neofetch или nitch но для PhoenixShell" },
 };
 
 pub fn cmdHelp(stdout: *Io.Writer) !void {
@@ -84,28 +94,39 @@ pub fn cmdReverse(stdout: *Io.Writer, text: []const u8) Io.Writer.Error!void {
 }
 
 //--- Всякие базовые команды ---//
-pub fn cmdEnv(
-    stdout: *Io.Writer, 
-    init: std.process.Init, 
-    name: []const u8
-) Io.Writer.Error !void {
-    if (name.len == 0) { 
+pub fn cmdEnv(stdout: *Io.Writer, init: std.process.Init, name: []const u8) Io.Writer.Error!void {
+    if (name.len == 0) {
         return stdout.writeAll("  синтаксис: env <ИМЯ>\n");
     }
 
     if (init.environ_map.get(name)) |value| {
         try stdout.print("{s}={s}\n", .{ name, value });
-    } 
-    else {
+    } else {
         try stdout.print("dltsh: переменная '{s}' не установлена\n", .{name});
     }
 }
 
-pub fn cmdArgs(
-    stdout: *Io.Writer,
-    init: std.process.Init, 
-    arena: std.mem.Allocator
-) !void {
+pub fn cmdFetch(stdout: *Io.Writer) !void {
+    try stdout.print("{s} _______ {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} |     | {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} | ___ | {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} | |_| | {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} | ____|                                     __    __{s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} | | ___     _________ _____ __ __   ___ ___ \\ \\  / /   {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} | | | |___  |  ___  | |   | | |\\ \\  | | | |  \\_\\/_/  {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} | | | |_| | |  |_|  | |___| | | \\ \\ | | | |  / /\\ \\  {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} |_| |_| |_| |_______| |____ |_|  \\_\\|_| |_| /_/  \\_\\ {s}\n", .{ YELLOW, RESET });
+
+    try stdout.print("{s} ================================================================ {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} [USER]:  [deltaqxq]         {s}\n", .{ YELLOW, RESET }); // Ну или ваш какой-нибудь юзер
+    try stdout.print("{s} [OS]:    [neplohoy-os]      {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} [HOST]:  [mega-krutoy-komp] {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} [Shell]: [PhoenixShell (Zig) v0.1.0] {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} [CPU]:   [potato-cpu-5000] {s}\n", .{ YELLOW, RESET });
+    try stdout.print("{s} [GPU]:   [ventilator-3000] {s}\n", .{ YELLOW, RESET });
+}
+
+pub fn cmdArgs(stdout: *Io.Writer, init: std.process.Init, arena: std.mem.Allocator) !void {
     const argv = try init.minimal.args.toSlice(arena);
     for (argv, 0..) |arg, i| {
         try stdout.print("argv[{d}] = {s}\n", .{ i, arg });
