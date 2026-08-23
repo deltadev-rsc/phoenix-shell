@@ -19,6 +19,7 @@ const Command = enum {
     mul,
     upper,
     reverse,
+    lower,
     len,
     env,
     args,
@@ -26,6 +27,8 @@ const Command = enum {
     clear,
     exit,
     fetch,
+    ver,
+    list
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -49,7 +52,7 @@ pub fn main(init: std.process.Init) !void {
 
         const line = readLine(input) catch |err| switch (err) {
             error.LineTooLong => {
-                try output.writeAll("dltsh: строка слишком длинная (>4095)\n");
+                try output.writeAll("PhoenixShell: строка слишком длинная (>4095)\n");
                 continue;
             },
             error.ReadFailed => return err,
@@ -67,19 +70,22 @@ pub fn main(init: std.process.Init) !void {
         const rest = std.mem.trim(u8, command_line[name.len..], " \t");
 
         const cmd = std.meta.stringToEnum(Command, name) orelse {
-            try output.print("dltsh: неизвестная команда '{s}'. Введите 'help'.\n", .{name});
+            try output.print("PhoenixShell неизвестная команда '{s}'. Введите 'help'.\n", .{name});
             continue;
         };
 
         switch (cmd) {
             .help  => try shell.cmdHelp(output),
             .fetch => try shell.cmdFetch(output),
+            .ver   => try shell.cmdVersion(output),
+            .list  => try shell.cmdList(output, init),
             .exit  => break,
             .clear => try output.writeAll("\x1b[2J\x1b[3J\x1b[H"),
             .echo  => try output.print("{s}\n", .{rest}),
             .add   => try shell.cmdCalc(output, &words, .add),
             .mul   => try shell.cmdCalc(output, &words, .mul),
             .upper => try shell.cmdUpper(output, rest),
+            .lower => try shell.cmdLower(output, rest),
             .reverse => try shell.cmdReverse(output, rest),
             .len     => try output.print("{d} байт\n", .{rest.len}),
             .env     => try shell.cmdEnv(output, init, rest),
